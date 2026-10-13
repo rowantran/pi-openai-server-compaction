@@ -176,9 +176,14 @@ export function applyRemoteHistoryPayloadPatch(params: {
   payload: JsonRecord;
   explicitHistory: unknown[];
 }): JsonRecord {
+  // Recent Pi versions put system instructions inside Responses `input`.
+  // Replace conversation history, not the current request's instructions.
+  const instructions = Array.isArray(params.payload.input)
+    ? params.payload.input.filter((item) => isRecord(item) && (item.role === "system" || item.role === "developer"))
+    : [];
   const nextPayload: JsonRecord = {
     ...params.payload,
-    input: params.explicitHistory,
+    input: [...instructions, ...params.explicitHistory],
   };
   delete nextPayload.messages;
   delete nextPayload.previous_response_id;
