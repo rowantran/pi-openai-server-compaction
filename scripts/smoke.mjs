@@ -201,25 +201,6 @@ const reconstructed = reconstructRemoteCompactionStateFromBranch({
     },
     {
       type: "message",
-      id: "user-b1",
-      message: {
-        role: "user",
-        content: [{ type: "text", text: "DROP_ME" }],
-      },
-    },
-    {
-      type: "message",
-      id: "assistant-b1",
-      message: {
-        role: "assistant",
-        provider: "anthropic",
-        api: "anthropic-messages",
-        model: "claude-sonnet-4-6",
-        content: [{ type: "text", text: "DROP_REPLY" }],
-      },
-    },
-    {
-      type: "message",
       id: "user-a2",
       message: {
         role: "user",
@@ -245,8 +226,33 @@ assert.match(reconstructedJson, /KEEP_ME_ONE/);
 assert.match(reconstructedJson, /KEEP_REPLY_ONE/);
 assert.match(reconstructedJson, /KEEP_ME_TWO/);
 assert.match(reconstructedJson, /KEEP_REPLY_TWO/);
-assert.doesNotMatch(reconstructedJson, /DROP_ME/);
-assert.doesNotMatch(reconstructedJson, /DROP_REPLY/);
+assert.equal(reconstructRemoteCompactionStateFromBranch({
+  branchEntries: [
+    {
+      type: "compaction",
+      id: "cmp-mixed",
+      details: { remoteCompaction: {
+        version: 1,
+        provider: "openai-responses-compact",
+        modelKey: targetModelKey,
+        replacementHistory: [{ type: "compaction", encrypted_content: "ENCRYPTED" }],
+      } },
+    },
+    {
+      type: "message",
+      id: "assistant-other-model",
+      message: {
+        role: "assistant",
+        provider: "anthropic",
+        api: "anthropic-messages",
+        model: "claude-sonnet-4-6",
+        content: [{ type: "text", text: "DO_NOT_DROP_OTHER_MODEL_WORK" }],
+      },
+    },
+  ],
+}), undefined, "a mixed-model suffix must use portable context, not silently discard the other model's work");
+
+await import(pathToFileURL(join(repoRoot, "tests", "routed-models.mjs")).href);
 
 const requestBody = buildRemoteCompactionRequestBody({
   model: {
